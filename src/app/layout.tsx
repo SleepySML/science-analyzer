@@ -5,8 +5,8 @@ import './globals.css'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'Science Analyzer - Latest Astrophysical Journal Articles',
-  description: 'Discover the latest articles from The Astrophysical Journal and related astronomy publications',
+  title: 'Science Analyzer - Latest Popular Science Articles',
+  description: 'Discover the latest articles from leading science publications including Science Daily, Phys.org, and Science Magazine',
 }
 
 export default function RootLayout({

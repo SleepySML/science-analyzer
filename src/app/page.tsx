@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Article } from '@/types/article';
-import { fetchLatestAstrophysicsArticles } from '@/lib/api';
+import { fetchLatestScienceArticles } from '@/lib/api';
 import ArticleCard from '@/components/ArticleCard';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import ErrorMessage from '@/components/ErrorMessage';
@@ -16,7 +16,7 @@ export default function HomePage() {
     try {
       setLoading(true);
       setError(null);
-      const data = await fetchLatestAstrophysicsArticles();
+      const data = await fetchLatestScienceArticles();
       setArticles(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An unexpected error occurred');
@@ -39,10 +39,10 @@ export default function HomePage() {
               Science Analyzer
             </h1>
             <p className="mt-2 text-lg text-gray-600 dark:text-gray-300">
-              Latest Articles from The Astrophysical Journal
+              Latest Articles from Popular Science Publications
             </p>
             <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-              Discover cutting-edge research in astronomy and astrophysics
+              Discover breakthrough research and scientific discoveries
             </p>
           </div>
         </div>
@@ -89,7 +89,7 @@ export default function HomePage() {
             {/* Articles Grid */}
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
               {articles.map((article, index) => (
-                <ArticleCard key={article.bibcode || index} article={article} />
+                <ArticleCard key={article.id || index} article={article} />
               ))}
             </div>
           </div>
@@ -101,7 +101,7 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="text-center text-sm text-gray-500 dark:text-gray-400">
             <p>
-              Data sourced from NASA ADS (Astrophysics Data System) and The Astrophysical Journal
+              Data sourced from Science Daily, Phys.org, Science Magazine, and other leading science publications
             </p>
             <p className="mt-1">
               Built with Next.js and Tailwind CSS

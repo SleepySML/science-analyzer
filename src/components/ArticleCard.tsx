@@ -7,8 +7,6 @@ interface ArticleCardProps {
 
 export default function ArticleCard({ article }: ArticleCardProps) {
   const articleURL = generateArticleURL(article);
-  const primaryTitle = Array.isArray(article.title) ? article.title[0] : article.title;
-  const authors = Array.isArray(article.author) ? article.author : [article.author];
   
   // Format the publication date
   const formatDate = (dateString: string) => {
@@ -35,59 +33,65 @@ export default function ArticleCard({ article }: ArticleCardProps) {
             rel="noopener noreferrer"
             className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200"
           >
-            {primaryTitle}
+            {article.title}
           </a>
         </h2>
 
-        {/* Authors */}
-        <div className="text-sm text-gray-600 dark:text-gray-300">
-          <span className="font-medium">Authors: </span>
-          {authors.slice(0, 3).join(', ')}
-          {authors.length > 3 && <span className="text-gray-500"> et al.</span>}
+        {/* Author and Source */}
+        <div className="flex flex-wrap gap-4 text-sm text-gray-600 dark:text-gray-300">
+          {article.author && (
+            <div>
+              <span className="font-medium">Author: </span>
+              {article.author}
+            </div>
+          )}
+          <div>
+            <span className="font-medium">Source: </span>
+            {article.source}
+          </div>
         </div>
 
-        {/* Publication info */}
+        {/* Publication date and categories */}
         <div className="flex flex-wrap gap-4 text-sm text-gray-500 dark:text-gray-400">
           <div>
-            <span className="font-medium">Journal: </span>
-            {article.pub}
-          </div>
-          <div>
             <span className="font-medium">Published: </span>
-            {formatDate(article.pubdate)}
+            {formatDate(article.pubDate)}
           </div>
+          {article.category && article.category.length > 0 && (
+            <div className="flex gap-1">
+              {article.category.slice(0, 2).map((cat, index) => (
+                <span 
+                  key={index}
+                  className="inline-block px-2 py-1 text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-full"
+                >
+                  {cat}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
 
-        {/* Abstract excerpt */}
-        {article.abstract && (
+        {/* Description excerpt */}
+        {article.description && (
           <div className="text-sm text-gray-700 dark:text-gray-300">
             <p className="line-clamp-3">
-              {article.abstract.length > 200 
-                ? `${article.abstract.substring(0, 200)}...` 
-                : article.abstract
+              {article.description.length > 200 
+                ? `${article.description.substring(0, 200)}...` 
+                : article.description
               }
             </p>
           </div>
         )}
 
-        {/* Metrics */}
-        <div className="flex justify-between items-center pt-2 border-t border-gray-100 dark:border-gray-700">
-          <div className="flex gap-4 text-xs text-gray-500 dark:text-gray-400">
-            {article.citations !== undefined && (
-              <span>📖 {article.citations} citations</span>
-            )}
-            {article.reads !== undefined && (
-              <span>👁️ {article.reads} reads</span>
-            )}
-          </div>
-          
+        {/* Read Article Button */}
+        <div className="flex justify-end pt-2 border-t border-gray-100 dark:border-gray-700">
           <a
             href={articleURL}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center px-3 py-1 text-xs font-medium text-blue-600 bg-blue-50 dark:bg-blue-900 dark:text-blue-200 rounded-full hover:bg-blue-100 dark:hover:bg-blue-800 transition-colors duration-200"
+            className="inline-flex items-center px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50 dark:bg-blue-900 dark:text-blue-200 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-800 transition-colors duration-200"
           >
-            Read Article →
+            Read Full Article →
           </a>
         </div>
       </div>

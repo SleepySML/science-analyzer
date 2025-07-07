@@ -1,24 +1,30 @@
 export interface Article {
-  bibcode: string;
-  title: string[];
-  author: string[];
-  pub: string;
-  pubdate: string;
-  abstract?: string;
-  doi?: string[];
-  url?: string;
-  keyword?: string[];
-  doctype: string;
-  citations?: number;
-  reads?: number;
+  id: string;
+  title: string;
+  author?: string;
+  source: string;
+  pubDate: string;
+  description?: string;
+  url: string;
+  category?: string[];
+  imageUrl?: string;
 }
 
-export interface ADSResponse {
-  response: {
-    numFound: number;
-    start: number;
-    docs: Article[];
-  };
+export interface RSSFeed {
+  title: string;
+  description: string;
+  link: string;
+  items: RSSItem[];
+}
+
+export interface RSSItem {
+  title: string;
+  description: string;
+  link: string;
+  pubDate: string;
+  category?: string[];
+  author?: string;
+  guid?: string;
 }
 
 export interface APIError {
