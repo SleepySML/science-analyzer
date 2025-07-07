@@ -1,33 +1,78 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Article } from '@/types/article';
-import { fetchLatestScienceArticles } from '@/lib/api';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { Article, JournalCategory } from '@/types/article';
+import { fetchLatestScienceArticles, clearApiCache } from '@/lib/api';
 import ArticleCard from '@/components/ArticleCard';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import ErrorMessage from '@/components/ErrorMessage';
+import JournalFilter from '@/components/JournalFilter';
 
 export default function HomePage() {
   const [articles, setArticles] = useState<Article[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<JournalCategory>('all');
+  
+  // Ref to track if a request is currently in progress
+  const isRequestInProgress = useRef(false);
+  // Ref to track the last request to prevent duplicate calls
+  const lastRequestRef = useRef<string>('');
 
-  const fetchArticles = async () => {
+  const fetchArticles = useCallback(async (category: JournalCategory = selectedCategory, force: boolean = false) => {
+    // Create a unique key for this request
+    const requestKey = `${category}-${Date.now()}`;
+    
+    // Prevent concurrent requests unless forced
+    if (isRequestInProgress.current && !force) {
+      console.log('Request already in progress, skipping...');
+      return;
+    }
+
+    // Prevent duplicate requests (within 1 second)
+    if (lastRequestRef.current === category && !force) {
+      console.log('Duplicate request detected, skipping...');
+      return;
+    }
+
     try {
+      isRequestInProgress.current = true;
+      lastRequestRef.current = category;
       setLoading(true);
       setError(null);
-      const data = await fetchLatestScienceArticles();
+      
+      console.log(`Fetching articles for category: ${category}`);
+      const data = await fetchLatestScienceArticles({ 
+        category,
+        limit: 30 
+      });
       setArticles(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An unexpected error occurred');
     } finally {
       setLoading(false);
+      isRequestInProgress.current = false;
     }
-  };
+  }, [selectedCategory]);
+
+  const handleCategoryChange = useCallback((category: JournalCategory) => {
+    setSelectedCategory(category);
+    fetchArticles(category, true); // Force the request for category changes
+  }, [fetchArticles]);
+
+  const handleRefresh = useCallback(() => {
+    clearApiCache(); // Clear cache to ensure fresh data
+    fetchArticles(selectedCategory, true); // Force the request for manual refresh
+  }, [fetchArticles, selectedCategory]);
 
   useEffect(() => {
-    fetchArticles();
-  }, []);
+    // Debounce the initial fetch to prevent React strict mode duplicate calls
+    const timeoutId = setTimeout(() => {
+      fetchArticles();
+    }, 100);
+
+    return () => clearTimeout(timeoutId);
+  }, [fetchArticles]);
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -39,10 +84,10 @@ export default function HomePage() {
               Science Analyzer
             </h1>
             <p className="mt-2 text-lg text-gray-600 dark:text-gray-300">
-              Latest Articles from Popular Science Publications
+              Latest Articles from Top Scientific Journals
             </p>
             <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-              Discover breakthrough research and scientific discoveries
+              Explore breakthrough research across multiple scientific disciplines
             </p>
           </div>
         </div>
@@ -50,32 +95,58 @@ export default function HomePage() {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Journal Filter */}
+        <div className="mb-8">
+          <JournalFilter
+            selectedCategory={selectedCategory}
+            onCategoryChange={handleCategoryChange}
+          />
+        </div>
+
         {loading && <LoadingSpinner />}
         
         {error && (
           <ErrorMessage 
             message={error} 
-            onRetry={fetchArticles}
+            onRetry={handleRefresh}
           />
         )}
         
         {!loading && !error && articles.length === 0 && (
           <div className="text-center py-12">
-            <p className="text-gray-500 dark:text-gray-400">
-              No articles found. Please try again later.
-            </p>
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-8">
+              <svg className="w-12 h-12 text-gray-400 dark:text-gray-500 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+                No articles found
+              </h3>
+              <p className="text-gray-500 dark:text-gray-400">
+                No articles are available for the selected journal category. Please try a different category or check back later.
+              </p>
+            </div>
           </div>
         )}
         
         {!loading && !error && articles.length > 0 && (
-          <div className="space-y-4">
-            {/* Refresh button */}
+          <div className="space-y-6">
+            {/* Results header */}
             <div className="flex justify-between items-center">
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-                Recent Publications ({articles.length} articles)
-              </h2>
+              <div>
+                <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+                  Recent Publications
+                </h2>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                  {articles.length} articles found
+                  {selectedCategory !== 'all' && (
+                    <span className="ml-2 px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 rounded-full text-xs">
+                      {selectedCategory.replace('-', ' ')}
+                    </span>
+                  )}
+                </p>
+              </div>
               <button
-                onClick={fetchArticles}
+                onClick={handleRefresh}
                 disabled={loading}
                 className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
               >
@@ -101,7 +172,10 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="text-center text-sm text-gray-500 dark:text-gray-400">
             <p>
-              Data sourced from Science Daily, Phys.org, Science Magazine, and other leading science publications
+              Data sourced from Nature, Science, Cell, and other leading scientific journals
+            </p>
+            <p className="mt-1">
+              Featuring articles from top medical, biological, physical, and earth science publications
             </p>
             <p className="mt-1">
               Built with Next.js and Tailwind CSS
