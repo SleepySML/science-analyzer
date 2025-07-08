@@ -60,13 +60,45 @@ A Node.js backend service that fetches the latest articles from top science jour
 npm install
 ```
 
-2. Create a `.env` file in the root directory (optional):
-```
+2. Create a `.env` file in the root directory:
+```env
+# Server Configuration
 PORT=3001
 NODE_ENV=development
+
+# Database Configuration
+DB_PATH=./database/articles.db
+
+# Telegram Bot Configuration (Optional)
+# Get your bot token from @BotFather on Telegram
+TELEGRAM_BOT_TOKEN=your_telegram_bot_token_here
+
+# Telegram Channel ID where articles will be sent
+# For channels, use format: @channel_username or -100xxxxxxxxxx (for private channels)
+# For groups, use the group ID (usually starts with -)
+CHANNEL_ID=@your_channel_username_here
 ```
 
-3. Start the server:
+3. **Setup Telegram Bot (Optional):**
+
+   If you want to automatically send new articles to a Telegram channel:
+
+   a. **Create a Telegram Bot:**
+   - Open Telegram and search for `@BotFather`
+   - Send `/newbot` command
+   - Choose a name and username for your bot
+   - Copy the bot token provided
+
+   b. **Setup Channel:**
+   - Create a Telegram channel or use an existing one
+   - Add your bot as an administrator to the channel
+   - Get the channel username (e.g., `@science_articles`) or channel ID
+
+   c. **Configure Environment:**
+   - Add `TELEGRAM_BOT_TOKEN` with your bot token
+   - Add `CHANNEL_ID` with your channel username or ID
+
+4. Start the server:
 ```bash
 # Development mode
 npm run dev
@@ -329,6 +361,93 @@ Health check endpoint.
   "status": "OK",
   "timestamp": "2024-01-15T10:30:00.000Z"
 }
+```
+
+## Telegram Bot API
+
+The following endpoints are available for Telegram bot integration:
+
+### GET /api/articles/telegram/config
+Get current Telegram bot configuration status.
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "enabled": true,
+    "hasToken": true,
+    "hasChannelId": true,
+    "channelId": "@science_articles"
+  },
+  "timestamp": "2024-01-15T10:30:00.000Z"
+}
+```
+
+### POST /api/articles/telegram/test
+Test Telegram bot connection and channel access.
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Telegram bot connection successful",
+  "data": {
+    "botInfo": {
+      "id": 123456789,
+      "first_name": "Science Bot",
+      "username": "science_analyzer_bot"
+    },
+    "chatInfo": {
+      "id": -1001234567890,
+      "title": "Science Articles Channel",
+      "type": "channel"
+    }
+  },
+  "timestamp": "2024-01-15T10:30:00.000Z"
+}
+```
+
+### POST /api/articles/telegram/send-summary
+Send a summary message to the Telegram channel with current statistics.
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Summary sent to Telegram channel",
+  "timestamp": "2024-01-15T10:30:00.000Z"
+}
+```
+
+### Automatic Telegram Features
+
+When Telegram bot is configured and enabled:
+
+- **New Article Notifications**: Automatically sends new articles to the channel when they are processed and stored in the database
+- **Rich Formatting**: Articles are formatted with titles, journal info, authors, publication dates, and content previews
+- **Rate Limiting**: Built-in delays between messages to avoid Telegram rate limits
+- **Error Handling**: Fallback to simplified formatting if Markdown parsing fails
+- **Batch Processing**: Efficiently handles multiple new articles at once
+
+### Telegram Message Format
+
+New articles are sent to the channel with the following format:
+
+```
+🔬 **New Scientific Article**
+
+📄 **Article Title Here**
+
+📊 **Journal:** Journal Name
+🧪 **Area:** Scientific Area
+👤 **Author:** Author Name
+📅 **Published:** Jan 15, 2024
+
+📝 **Preview:**
+First 200 characters of article content...
+
+🔗 [Read Full Article](https://journal.com/article-url)
 ```
 
 ## Article Data Structure

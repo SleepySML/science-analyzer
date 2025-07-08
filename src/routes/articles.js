@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const journalService = require('../services/journalService');
 const databaseService = require('../services/databaseService');
+const telegramService = require('../services/telegramService');
 const { getAllAreas } = require('../config/journals');
 
 // Get all articles from all journals
@@ -274,6 +275,93 @@ router.delete('/database', async (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Failed to clear database',
+      message: error.message
+    });
+  }
+});
+
+// Get Telegram bot configuration
+router.get('/telegram/config', (req, res) => {
+  try {
+    const config = telegramService.getConfig();
+    res.json({
+      success: true,
+      data: config,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Error getting Telegram config:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to get Telegram configuration',
+      message: error.message
+    });
+  }
+});
+
+// Test Telegram bot connection
+router.post('/telegram/test', async (req, res) => {
+  try {
+    const result = await telegramService.testConnection();
+    
+    if (result.success) {
+      res.json({
+        success: true,
+        message: 'Telegram bot connection successful',
+        data: {
+          botInfo: result.botInfo,
+          chatInfo: result.chatInfo
+        },
+        timestamp: new Date().toISOString()
+      });
+    } else {
+      res.status(400).json({
+        success: false,
+        error: result.error,
+        timestamp: new Date().toISOString()
+      });
+    }
+  } catch (error) {
+    console.error('Error testing Telegram connection:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to test Telegram connection',
+      message: error.message
+    });
+  }
+});
+
+// Send summary message to Telegram channel
+router.post('/telegram/send-summary', async (req, res) => {
+  try {
+    const stats = await databaseService.getStatistics();
+    const areas = getAllAreas();
+    
+    const result = await telegramService.sendSummaryMessage(
+      stats.total_articles || 0,
+      stats.articles_today || 0,
+      areas.length,
+      stats.total_journals || 0
+    );
+    
+    if (result) {
+      res.json({
+        success: true,
+        message: 'Summary sent to Telegram channel',
+        timestamp: new Date().toISOString()
+      });
+    } else {
+      res.status(400).json({
+        success: false,
+        error: 'Failed to send summary message',
+        timestamp: new Date().toISOString()
+      });
+    }
+  } catch (error) {
+    console.error('Error sending Telegram summary:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to send summary to Telegram',
       message: error.message
     });
   }

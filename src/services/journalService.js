@@ -3,6 +3,7 @@ const axios = require('axios');
 const { getAllJournals, getJournalsByArea, getAllAreas } = require('../config/journals');
 const databaseService = require('./databaseService');
 const articleScraperService = require('./articleScraperService');
+const telegramService = require('./telegramService');
 
 class JournalService {
   constructor() {
@@ -58,12 +59,23 @@ class JournalService {
       // Fetch content for new articles and store in database
       if (newArticles.length > 0) {
         const articlesWithContent = await articleScraperService.batchFetchArticles(newArticles);
+        const successfullyInsertedArticles = [];
         
         for (const article of articlesWithContent) {
           try {
             await databaseService.insertArticle(article);
+            successfullyInsertedArticles.push(article);
           } catch (error) {
             console.error(`Error inserting article: ${article.title}`, error.message);
+          }
+        }
+
+        // Send new articles to Telegram channel
+        if (successfullyInsertedArticles.length > 0) {
+          try {
+            await telegramService.sendBatchArticlesToChannel(successfullyInsertedArticles);
+          } catch (error) {
+            console.error('Error sending articles to Telegram:', error.message);
           }
         }
       }

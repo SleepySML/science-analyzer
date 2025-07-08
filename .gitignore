@@ -40,4 +40,5 @@ coverage/
 
 # Build
 dist/
-build/ 
+build/
+.env
