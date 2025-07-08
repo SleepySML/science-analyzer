@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const journalService = require('../services/journalService');
-const htmlGeneratorService = require('../services/htmlGeneratorService');
+const databaseService = require('../services/databaseService');
 const { getAllAreas } = require('../config/journals');
 
 // Get all articles from all journals
@@ -151,28 +151,129 @@ router.get('/latest/:count?', async (req, res) => {
   }
 });
 
-// Generate HTML file with articles
-router.post('/generate-html', async (req, res) => {
+// Process new articles and store in database
+router.post('/process', async (req, res) => {
   try {
-    console.log('🚀 Manual HTML generation triggered...');
+    console.log('🚀 Manual article processing triggered...');
     const articlesData = await journalService.fetchAllArticles();
-    await htmlGeneratorService.writeHtmlFile(articlesData);
     
     res.json({
       success: true,
-      message: 'HTML file generated successfully',
+      message: 'Articles processed successfully',
       data: {
         totalArticles: articlesData.totalArticles,
         areas: articlesData.areas,
-        journals: articlesData.journals
+        journals: articlesData.journals,
+        statistics: articlesData.statistics
       },
       timestamp: new Date().toISOString()
     });
   } catch (error) {
-    console.error('Error generating HTML:', error);
+    console.error('Error processing articles:', error);
     res.status(500).json({
       success: false,
-      error: 'Failed to generate HTML file',
+      error: 'Failed to process articles',
+      message: error.message
+    });
+  }
+});
+
+// Get articles from database
+router.get('/database', async (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit) || 50;
+    const articles = await databaseService.getAllArticles(limit);
+    const stats = await databaseService.getStatistics();
+    
+    res.json({
+      success: true,
+      data: {
+        articles,
+        statistics: stats,
+        count: articles.length
+      },
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Error fetching articles from database:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch articles from database',
+      message: error.message
+    });
+  }
+});
+
+// Search articles in database
+router.get('/search', async (req, res) => {
+  try {
+    const searchTerm = req.query.q;
+    const limit = parseInt(req.query.limit) || 20;
+    
+    if (!searchTerm) {
+      return res.status(400).json({
+        success: false,
+        error: 'Search term is required',
+        message: 'Please provide a search term using the "q" parameter'
+      });
+    }
+    
+    const articles = await databaseService.searchArticles(searchTerm, limit);
+    
+    res.json({
+      success: true,
+      data: {
+        articles,
+        searchTerm,
+        count: articles.length
+      },
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Error searching articles:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to search articles',
+      message: error.message
+    });
+  }
+});
+
+// Get database statistics
+router.get('/stats', async (req, res) => {
+  try {
+    const stats = await databaseService.getStatistics();
+    
+    res.json({
+      success: true,
+      data: stats,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Error fetching statistics:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch statistics',
+      message: error.message
+    });
+  }
+});
+
+// Clear database
+router.delete('/database', async (req, res) => {
+  try {
+    await databaseService.clearDatabase();
+    
+    res.json({
+      success: true,
+      message: 'Database cleared successfully',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Error clearing database:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to clear database',
       message: error.message
     });
   }

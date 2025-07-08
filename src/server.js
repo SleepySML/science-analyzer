@@ -3,7 +3,7 @@ const cors = require('cors');
 const dotenv = require('dotenv');
 const articlesRoutes = require('./routes/articles');
 const journalService = require('./services/journalService');
-const htmlGeneratorService = require('./services/htmlGeneratorService');
+const databaseService = require('./services/databaseService');
 
 dotenv.config();
 
@@ -33,26 +33,27 @@ app.use('*', (req, res) => {
   res.status(404).json({ error: 'Route not found' });
 });
 
-// Function to generate HTML file with articles
-async function generateHtmlFile() {
+// Function to process articles and store in database
+async function processArticles() {
   try {
-    console.log('🚀 Starting article fetching and HTML generation...');
+    console.log('🚀 Starting article processing...');
     const articlesData = await journalService.fetchAllArticles();
-    await htmlGeneratorService.writeHtmlFile(articlesData);
-    console.log('✅ HTML file generation completed!');
+    const stats = await databaseService.getStatistics();
+    console.log('✅ Article processing completed!');
+    console.log(`📊 Database contains ${stats.total_articles} articles from ${stats.total_journals} journals`);
   } catch (error) {
-    console.error('❌ Error generating HTML file:', error);
+    console.error('❌ Error processing articles:', error);
   }
 }
 
 app.listen(PORT, async () => {
   console.log(`Science Analyzer Backend running on port ${PORT}`);
   
-  // Generate HTML file on startup
-  await generateHtmlFile();
+  // Process articles on startup
+  await processArticles();
   
-  // Regenerate HTML file every hour
-  setInterval(generateHtmlFile, 60 * 60 * 1000);
+  // Optional: Process articles every 6 hours (comment out if not needed)
+  // setInterval(processArticles, 6 * 60 * 60 * 1000);
 });
 
 module.exports = app; 

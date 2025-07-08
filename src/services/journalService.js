@@ -1,6 +1,8 @@
 const RSSParser = require('rss-parser');
 const axios = require('axios');
 const { getAllJournals, getJournalsByArea, getAllAreas } = require('../config/journals');
+const databaseService = require('./databaseService');
+const articleScraperService = require('./articleScraperService');
 
 class JournalService {
   constructor() {
@@ -11,7 +13,7 @@ class JournalService {
       }
     });
     this.cache = new Map();
-    this.cacheTimeout = 30 * 60 * 1000; // 30 minutes
+    this.cacheTimeout = 60 * 60 * 1000; // 1 hour
   }
 
   async fetchArticlesFromJournal(journal) {
@@ -42,14 +44,41 @@ class JournalService {
         impact: journal.impact
       }));
 
+      // Filter articles that are not in the database
+      const newArticles = [];
+      for (const article of articles) {
+        const exists = await databaseService.articleExists(article.link);
+        if (!exists) {
+          newArticles.push(article);
+        }
+      }
+
+      console.log(`Found ${newArticles.length} new articles out of ${articles.length} from ${journal.name}`);
+
+      // Fetch content for new articles and store in database
+      if (newArticles.length > 0) {
+        const articlesWithContent = await articleScraperService.batchFetchArticles(newArticles);
+        
+        for (const article of articlesWithContent) {
+          try {
+            await databaseService.insertArticle(article);
+          } catch (error) {
+            console.error(`Error inserting article: ${article.title}`, error.message);
+          }
+        }
+      }
+
+      // Get all articles from database for this journal
+      const dbArticles = await databaseService.getArticlesByJournal(journal.name, 10);
+      
       // Cache the results
       this.cache.set(cacheKey, {
-        articles,
+        articles: dbArticles,
         timestamp: Date.now()
       });
 
-      console.log(`Successfully fetched ${articles.length} articles from ${journal.name}`);
-      return articles;
+      console.log(`Successfully processed ${articles.length} articles from ${journal.name} (${newArticles.length} new)`);
+      return dbArticles;
     } catch (error) {
       console.error(`Error fetching articles from ${journal.name}:`, error.message);
       return [];
@@ -63,14 +92,12 @@ class JournalService {
       throw new Error(`No journals found for area: ${area}`);
     }
 
+    // First, fetch articles from all journals in this area (this will process new articles)
     const articlePromises = journals.map(journal => this.fetchArticlesFromJournal(journal));
-    const articlesArrays = await Promise.all(articlePromises);
+    await Promise.all(articlePromises);
     
-    // Flatten and sort by published date
-    const allArticles = articlesArrays
-      .flat()
-      .filter(article => article.publishedDate)
-      .sort((a, b) => new Date(b.publishedDate) - new Date(a.publishedDate));
+    // Then get articles from database for this area
+    const allArticles = await databaseService.getArticlesByArea(area, 50);
 
     return {
       area,
@@ -85,17 +112,17 @@ class JournalService {
     const areaPromises = areas.map(area => this.fetchArticlesByArea(area));
     const areaResults = await Promise.all(areaPromises);
     
-    const allArticles = areaResults
-      .map(result => result.articles)
-      .flat()
-      .sort((a, b) => new Date(b.publishedDate) - new Date(a.publishedDate));
+    // Get all articles from database
+    const allArticles = await databaseService.getAllArticles(100);
+    const stats = await databaseService.getStatistics();
 
     return {
-      totalArticles: allArticles.length,
+      totalArticles: stats.total_articles || 0,
       areas: areas.length,
       journals: getAllJournals().length,
       results: areaResults,
-      latestArticles: allArticles.slice(0, 50) // Return top 50 most recent
+      latestArticles: allArticles.slice(0, 50), // Return top 50 most recent
+      statistics: stats
     };
   }
 

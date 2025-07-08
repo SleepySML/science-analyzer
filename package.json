@@ -18,7 +18,9 @@
     "rss-parser": "^3.13.0",
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
-    "node-cron": "^3.0.3"
+    "node-cron": "^3.0.3",
+    "sqlite3": "^5.1.6",
+    "turndown": "^7.1.2"
   },
   "devDependencies": {
     "nodemon": "^3.0.1",
