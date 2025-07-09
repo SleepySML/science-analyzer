@@ -41,11 +41,18 @@ class TelegramService {
     // Get a preview of the article content (first 200 characters)
     let preview = '';
     if (article.content && article.content.length > 50) {
-      preview = article.content.substring(0, 200).trim();
-      if (preview.length === 200) {
-        preview += '...';
+      // Check if content is behind paywall
+      if (article.content.includes('subscription to access')) {
+        preview = '🔒 Premium Content - Subscription Required';
+      } else if (article.content === 'Content not available') {
+        preview = '⚠️ Content not available';
+      } else {
+        preview = article.content.substring(0, 200).trim();
+        if (preview.length === 200) {
+          preview += '...';
+        }
+        preview = this.escapeMarkdown(preview);
       }
-      preview = this.escapeMarkdown(preview);
     }
 
     // Format the date

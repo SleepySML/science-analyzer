@@ -30,7 +30,11 @@ class ArticleScraperService {
       const content = this.extractContent($, url);
       
       if (content && content.length > 100) {
-        console.log(`✅ Successfully extracted ${content.length} characters from article`);
+        if (content.includes('subscription to access')) {
+          console.log(`🔒 Article behind paywall: ${url}`);
+        } else {
+          console.log(`✅ Successfully extracted ${content.length} characters from article`);
+        }
         return content;
       } else {
         console.log(`⚠️ Article content too short or empty for: ${url}`);
@@ -44,6 +48,11 @@ class ArticleScraperService {
 
   extractContent($, url) {
     let content = '';
+    
+    // Check for subscription/paywall indicators first
+    if (this.isContentBehindPaywall($, url)) {
+      return 'This article content is not freely available and requires a subscription to access. Please visit the journal website to read the full article.';
+    }
     
     // Try different selectors based on the journal/website
     if (url.includes('nature.com')) {
@@ -69,7 +78,13 @@ class ArticleScraperService {
       content = this.extractGenericContent($);
     }
     
-    return this.cleanContent(content);
+    // Final check: if extracted content is very short, it might be behind paywall
+    const cleanedContent = this.cleanContent(content);
+    if (cleanedContent.length < 200 && this.hasPaywallIndicators($, cleanedContent)) {
+      return 'This article content is not freely available and requires a subscription to access. Please visit the journal website to read the full article.';
+    }
+    
+    return cleanedContent;
   }
 
   extractNatureContent($) {
@@ -206,6 +221,239 @@ class ArticleScraperService {
     ];
     
     return this.trySelectors($, selectors);
+  }
+
+  isContentBehindPaywall($, url) {
+    // Check for common paywall indicators in the page content
+    const pageText = $('body').text().toLowerCase();
+    const pageHtml = $('body').html().toLowerCase();
+    
+    // Common paywall/subscription indicators
+    const paywallKeywords = [
+      'subscribe to continue reading',
+      'subscription required',
+      'premium content',
+      'paywall',
+      'sign in to read',
+      'login to continue',
+      'create account to read',
+      'access denied',
+      'subscription only',
+      'paid content',
+      'member exclusive',
+      'subscribers only',
+      'full access requires',
+      'purchase article',
+      'buy this article',
+      'institutional access',
+      'log in to view',
+      'register to read',
+      'free trial',
+      'upgrade to read',
+      'unlock this article',
+      'premium access',
+      'trial expired',
+      'subscription expired',
+      'preview only',
+      'limited preview',
+      'read more requires'
+    ];
+    
+    // Check for paywall keywords
+    for (const keyword of paywallKeywords) {
+      if (pageText.includes(keyword)) {
+        console.log(`⚠️ Paywall detected: "${keyword}" found in page content`);
+        return true;
+      }
+    }
+    
+    // Check for specific paywall CSS selectors
+    const paywallSelectors = [
+      '.paywall',
+      '.subscription-required',
+      '.premium-content',
+      '.login-required',
+      '.access-denied',
+      '.subscription-wall',
+      '.auth-required',
+      '.member-only',
+      '.subscription-overlay',
+      '.paywall-overlay',
+      '.premium-overlay'
+    ];
+    
+    for (const selector of paywallSelectors) {
+      if ($(selector).length > 0) {
+        console.log(`⚠️ Paywall detected: "${selector}" element found on page`);
+        return true;
+      }
+    }
+    
+    // Journal-specific paywall detection
+    if (url.includes('nature.com')) {
+      return this.detectNaturePaywall($);
+    } else if (url.includes('science.org')) {
+      return this.detectSciencePaywall($);
+    } else if (url.includes('cell.com')) {
+      return this.detectCellPaywall($);
+    } else if (url.includes('thelancet.com')) {
+      return this.detectLancetPaywall($);
+    } else if (url.includes('nejm.org')) {
+      return this.detectNEJMPaywall($);
+    } else if (url.includes('pubs.acs.org')) {
+      return this.detectACSPaywall($);
+    } else if (url.includes('ieeexplore.ieee.org')) {
+      return this.detectIEEEPaywall($);
+    }
+    
+    return false;
+  }
+
+  detectNaturePaywall($) {
+    // Nature-specific paywall indicators
+    const indicators = [
+      '.c-article-access-info',
+      '.c-article-teaser',
+      '.c-banner--subscription',
+      '.c-subscription-banner',
+      '.access-banner'
+    ];
+    
+    for (const indicator of indicators) {
+      if ($(indicator).length > 0) {
+        return true;
+      }
+    }
+    
+    return false;
+  }
+
+  detectSciencePaywall($) {
+    // Science.org paywall indicators
+    const indicators = [
+      '.subscription-required',
+      '.access-restricted',
+      '.login-banner',
+      '.subscription-banner'
+    ];
+    
+    for (const indicator of indicators) {
+      if ($(indicator).length > 0) {
+        return true;
+      }
+    }
+    
+    return false;
+  }
+
+  detectCellPaywall($) {
+    // Cell paywall indicators
+    const indicators = [
+      '.article-access',
+      '.subscription-required',
+      '.access-banner',
+      '.login-required'
+    ];
+    
+    for (const indicator of indicators) {
+      if ($(indicator).length > 0) {
+        return true;
+      }
+    }
+    
+    return false;
+  }
+
+  detectLancetPaywall($) {
+    // The Lancet paywall indicators
+    const indicators = [
+      '.access-banner',
+      '.subscription-required',
+      '.login-banner',
+      '.premium-content'
+    ];
+    
+    for (const indicator of indicators) {
+      if ($(indicator).length > 0) {
+        return true;
+      }
+    }
+    
+    return false;
+  }
+
+  detectNEJMPaywall($) {
+    // NEJM paywall indicators
+    const indicators = [
+      '.subscription-required',
+      '.access-restricted',
+      '.login-banner',
+      '.premium-banner'
+    ];
+    
+    for (const indicator of indicators) {
+      if ($(indicator).length > 0) {
+        return true;
+      }
+    }
+    
+    return false;
+  }
+
+  detectACSPaywall($) {
+    // ACS paywall indicators
+    const indicators = [
+      '.subscription-required',
+      '.access-restricted',
+      '.login-banner',
+      '.member-access'
+    ];
+    
+    for (const indicator of indicators) {
+      if ($(indicator).length > 0) {
+        return true;
+      }
+    }
+    
+    return false;
+  }
+
+  detectIEEEPaywall($) {
+    // IEEE paywall indicators
+    const indicators = [
+      '.subscription-required',
+      '.access-restricted',
+      '.login-banner',
+      '.institutional-access'
+    ];
+    
+    for (const indicator of indicators) {
+      if ($(indicator).length > 0) {
+        return true;
+      }
+    }
+    
+    return false;
+  }
+
+  hasPaywallIndicators($, content) {
+    // Check if the extracted content itself has paywall indicators
+    const contentLower = content.toLowerCase();
+    
+    const indicators = [
+      'subscribe to continue',
+      'subscription required',
+      'sign in to read',
+      'login to continue',
+      'access denied',
+      'preview only',
+      'limited preview',
+      'full text requires',
+      'purchase access',
+      'institutional access'
+    ];
+    
+    return indicators.some(indicator => contentLower.includes(indicator));
   }
 
   trySelectors($, selectors) {

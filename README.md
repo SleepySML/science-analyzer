@@ -8,6 +8,7 @@ A Node.js backend service that fetches the latest articles from top science jour
 - **SQLite Database Integration**: Stores articles with full content in local database
 - **Smart Filtering**: Only processes articles that are not already in the database
 - **Full Article Content**: Extracts and stores article text without HTML tags
+- **Paywall Detection**: Identifies subscription-required content and provides appropriate messages
 - **Database Access**: Compatible with DBeaver for database management
 - Supports 7 scientific areas: General Science, Physics, Biology, Chemistry, Medicine, Engineering, and Environmental Science
 - Built-in caching to reduce API calls and improve performance
@@ -153,8 +154,31 @@ CREATE TABLE articles (
 The system automatically:
 - **Filters articles**: Only processes articles not already in database
 - **Fetches content**: Downloads full article text from web pages
+- **Paywall Detection**: Identifies subscription-required content and provides appropriate messages
 - **Stores data**: Saves articles with clean text content (no HTML tags)
 - **Maintains uniqueness**: Uses article link as unique identifier
+
+### Paywall Detection
+
+The system includes intelligent paywall detection that identifies when article content is behind a subscription paywall:
+
+**Detection Methods:**
+- **Keyword Analysis**: Scans for common paywall phrases like "subscription required", "sign in to read", "premium content"
+- **CSS Selectors**: Detects paywall-specific HTML elements like `.paywall`, `.subscription-required`, `.premium-content`
+- **Journal-Specific**: Custom detection for major journals (Nature, Science, Cell, Lancet, NEJM, etc.)
+- **Content Analysis**: Evaluates extracted content for subscription indicators
+
+**Paywall Message:**
+When content is behind a paywall, the system stores:
+```
+"This article content is not freely available and requires a subscription to access. Please visit the journal website to read the full article."
+```
+
+**Benefits:**
+- Clear indication when content is not freely available
+- Prevents misleading partial content extraction
+- Maintains consistent data quality
+- Provides guidance to users on where to access full content
 
 ## API Endpoints
 
@@ -446,6 +470,8 @@ New articles are sent to the channel with the following format:
 
 📝 **Preview:**
 First 200 characters of article content...
+OR
+🔒 Premium Content - Subscription Required
 
 🔗 [Read Full Article](https://journal.com/article-url)
 ```
