@@ -3,6 +3,7 @@ const router = express.Router();
 const journalService = require('../services/journalService');
 const databaseService = require('../services/databaseService');
 const telegramService = require('../services/telegramService');
+const openaiService = require('../services/openaiService');
 const { getAllAreas } = require('../config/journals');
 
 // Get all articles from all journals
@@ -362,6 +363,58 @@ router.post('/telegram/send-summary', async (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Failed to send summary to Telegram',
+      message: error.message
+    });
+  }
+});
+
+// Get OpenAI service configuration
+router.get('/openai/config', (req, res) => {
+  try {
+    const config = openaiService.getConfig();
+    res.json({
+      success: true,
+      data: config,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Error getting OpenAI config:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to get OpenAI configuration',
+      message: error.message
+    });
+  }
+});
+
+// Test OpenAI service with sample article
+router.post('/openai/test', async (req, res) => {
+  try {
+    const testArticle = {
+      title: 'Test Article for AI Analysis',
+      journal: 'Nature',
+      area: 'General Science',
+      author: 'Test Author',
+      published_date: new Date().toISOString(),
+      content: 'This is a test article to verify that the OpenAI service is working correctly. It contains sample scientific content that should be analyzed by the AI model to generate a summary with key findings, scientific impact, and industry applications.'
+    };
+    
+    const analysis = await openaiService.analyzeArticle(testArticle);
+    
+    res.json({
+      success: true,
+      message: 'OpenAI test successful',
+      data: {
+        testArticle: testArticle,
+        analysis: analysis
+      },
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Error testing OpenAI service:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to test OpenAI service',
       message: error.message
     });
   }

@@ -4,6 +4,7 @@ const { getAllJournals, getJournalsByArea, getAllAreas } = require('../config/jo
 const databaseService = require('./databaseService');
 const articleScraperService = require('./articleScraperService');
 const telegramService = require('./telegramService');
+const openaiService = require('./openaiService');
 
 class JournalService {
   constructor() {
@@ -70,12 +71,40 @@ class JournalService {
           }
         }
 
-        // Send new articles to Telegram channel
+        // Analyze articles with OpenAI and send to Telegram channel
         if (successfullyInsertedArticles.length > 0) {
           try {
-            await telegramService.sendBatchArticlesToChannel(successfullyInsertedArticles);
+            // Filter articles with accessible content for AI analysis
+            const accessibleArticles = successfullyInsertedArticles.filter(article => 
+              article.content && 
+              article.content !== 'Content not available' && 
+              !article.content.includes('subscription to access')
+            );
+            
+            if (accessibleArticles.length > 0) {
+              console.log(`🤖 Processing ${accessibleArticles.length} articles with AI analysis...`);
+              
+              // Analyze articles with AI
+              const analyzedArticles = await openaiService.batchAnalyzeArticles(accessibleArticles);
+              
+              // Send analyzed articles to Telegram
+              await telegramService.sendBatchArticlesToChannel(analyzedArticles);
+            }
+            
+            // Send non-accessible articles (paywall/no content) separately
+            const nonAccessibleArticles = successfullyInsertedArticles.filter(article => 
+              !article.content || 
+              article.content === 'Content not available' || 
+              article.content.includes('subscription to access')
+            );
+            
+            if (nonAccessibleArticles.length > 0) {
+              console.log(`📤 Sending ${nonAccessibleArticles.length} non-accessible articles to Telegram...`);
+              await telegramService.sendBatchArticlesToChannel(nonAccessibleArticles);
+            }
+            
           } catch (error) {
-            console.error('Error sending articles to Telegram:', error.message);
+            console.error('Error processing articles with AI or sending to Telegram:', error.message);
           }
         }
       }

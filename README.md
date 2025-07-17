@@ -8,6 +8,7 @@ A Node.js backend service that fetches the latest articles from top science jour
 - **SQLite Database Integration**: Stores articles with full content in local database
 - **Smart Filtering**: Only processes articles that are not already in the database
 - **Full Article Content**: Extracts and stores article text without HTML tags
+- **AI-Powered Analysis**: Intelligent summaries with impact assessment and industry applications
 - **Paywall Detection**: Identifies subscription-required content and provides appropriate messages
 - **Database Access**: Compatible with DBeaver for database management
 - Supports 7 scientific areas: General Science, Physics, Biology, Chemistry, Medicine, Engineering, and Environmental Science
@@ -78,6 +79,16 @@ TELEGRAM_BOT_TOKEN=your_telegram_bot_token_here
 # For channels, use format: @channel_username or -100xxxxxxxxxx (for private channels)
 # For groups, use the group ID (usually starts with -)
 CHANNEL_ID=@your_channel_username_here
+
+# OpenAI/OpenRouter Configuration (Optional)
+# API token for OpenRouter or OpenAI compatible service
+OPEN_ROUTER_API_TOKEN=your_openrouter_api_token_here
+
+# Base URL for OpenRouter or OpenAI compatible service
+OPEN_ROUTER_BASE_URL=https://openrouter.ai/api/v1
+
+# Model to use for article analysis
+OPEN_ROUTER_MODEL=anthropic/claude-3-5-sonnet-20241022
 ```
 
 3. **Setup Telegram Bot (Optional):**
@@ -99,7 +110,21 @@ CHANNEL_ID=@your_channel_username_here
    - Add `TELEGRAM_BOT_TOKEN` with your bot token
    - Add `CHANNEL_ID` with your channel username or ID
 
-4. Start the server:
+4. **Setup OpenAI/OpenRouter (Optional):**
+
+   For AI-powered article analysis and intelligent summaries:
+
+   a. **Get OpenRouter API Key:**
+   - Visit [OpenRouter.ai](https://openrouter.ai/)
+   - Create an account and get your API key
+   - Choose models like Claude, GPT-4, or others
+
+   b. **Configure Environment:**
+   - Add `OPEN_ROUTER_API_TOKEN` with your API key
+   - Add `OPEN_ROUTER_BASE_URL` (usually `https://openrouter.ai/api/v1`)
+   - Add `OPEN_ROUTER_MODEL` (e.g., `anthropic/claude-3-5-sonnet-20241022`)
+
+5. Start the server:
 ```bash
 # Development mode
 npm run dev
@@ -179,6 +204,44 @@ When content is behind a paywall, the system stores:
 - Prevents misleading partial content extraction
 - Maintains consistent data quality
 - Provides guidance to users on where to access full content
+
+## AI-Powered Article Analysis
+
+The system includes advanced AI analysis using OpenAI-compatible services (OpenRouter, OpenAI, etc.) to provide intelligent summaries and insights:
+
+### Analysis Features
+
+**Comprehensive Analysis:**
+- **Summary**: Concise explanation of research findings
+- **Scientific Impact**: Which fields could be influenced
+- **Industry Applications**: Companies and sectors that could benefit
+- **Key Takeaways**: Most important aspects for general audience
+
+**Smart Processing:**
+- Only analyzes articles with accessible content (not behind paywalls)
+- Respects rate limits with intelligent batching
+- Provides fallback summaries when AI is unavailable
+- Handles errors gracefully with retry mechanisms
+
+### AI Configuration
+
+**Supported Services:**
+- **OpenRouter**: Access to multiple AI models (Claude, GPT-4, etc.)
+- **OpenAI**: Direct OpenAI API integration
+- **Compatible APIs**: Any OpenAI-compatible service
+
+**Model Selection:**
+- `anthropic/claude-3-5-sonnet-20241022` (recommended for scientific analysis)
+- `openai/gpt-4o-mini` (cost-effective option)
+- `openai/gpt-4` (highest quality, more expensive)
+
+### Benefits
+
+✅ **Intelligent Insights**: AI analyzes complex scientific content  
+✅ **Practical Applications**: Identifies real-world use cases  
+✅ **Industry Relevance**: Highlights commercial opportunities  
+✅ **Engaging Format**: Optimized for Telegram readability  
+✅ **Quality Assurance**: Fallback mechanisms ensure reliability
 
 ## API Endpoints
 
@@ -474,6 +537,76 @@ OR
 🔒 Premium Content - Subscription Required
 
 🔗 [Read Full Article](https://journal.com/article-url)
+```
+
+## OpenAI API
+
+The following endpoints are available for OpenAI integration:
+
+### GET /api/articles/openai/config
+Get current OpenAI service configuration status.
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "enabled": true,
+    "hasApiToken": true,
+    "hasBaseURL": true,
+    "model": "anthropic/claude-3-5-sonnet-20241022",
+    "baseURL": "https://openrouter.ai/api/v1"
+  },
+  "timestamp": "2024-01-15T10:30:00.000Z"
+}
+```
+
+### POST /api/articles/openai/test
+Test OpenAI service with a sample article analysis.
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "OpenAI test successful",
+  "data": {
+    "testArticle": {
+      "title": "Test Article for AI Analysis",
+      "journal": "Nature",
+      "area": "General Science",
+      "author": "Test Author",
+      "content": "Sample content..."
+    },
+    "analysis": "AI-generated analysis with summary, impact, and applications..."
+  },
+  "timestamp": "2024-01-15T10:30:00.000Z"
+}
+```
+
+### Enhanced Telegram Messages
+
+When OpenAI is enabled, Telegram messages include AI analysis instead of simple previews:
+
+```
+🔬 **New Scientific Article**
+
+📄 **Revolutionary Quantum Computing Breakthrough**
+
+📊 **Journal:** Nature
+🧪 **Area:** Physics  
+👤 **Author:** Dr. Jane Smith
+📅 **Published:** Jan 15, 2024
+
+🤖 **AI Analysis:**
+📊 **Summary:** Researchers developed a new quantum error correction method that reduces computation errors by 90%...
+
+🔬 **Scientific Impact:** This breakthrough could accelerate quantum computing applications in cryptography and drug discovery...
+
+🏭 **Industry Applications:** Companies like IBM, Google, and pharmaceutical firms could benefit from faster quantum simulations...
+
+🌟 **Key Takeaway:** This research brings practical quantum computing significantly closer to reality.
+
+🔗 [Read Full Article](https://nature.com/article-url)
 ```
 
 ## Article Data Structure

@@ -5,3 +5,4 @@ alwaysApply: true
 * Use Node.js for backend
 * Code should be clean and redable.
 * Components should be with heigh cohesion and low coupling.
+* Follow best practices: SOLID, KISS, DRY and etc.

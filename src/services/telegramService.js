@@ -38,10 +38,14 @@ class TelegramService {
     const author = this.escapeMarkdown(article.author || 'Unknown');
     const link = article.link;
 
-    // Get a preview of the article content (first 200 characters)
-    let preview = '';
-    if (article.content && article.content.length > 50) {
-      // Check if content is behind paywall
+    // Use AI summary if available, otherwise use content preview
+    let analysisSection = '';
+    if (article.aiSummary) {
+      // Use AI-generated analysis
+      analysisSection = `🤖 **AI Analysis:**\n${this.escapeMarkdown(article.aiSummary)}\n\n`;
+    } else if (article.content && article.content.length > 50) {
+      // Fallback to content preview
+      let preview = '';
       if (article.content.includes('subscription to access')) {
         preview = '🔒 Premium Content - Subscription Required';
       } else if (article.content === 'Content not available') {
@@ -53,6 +57,7 @@ class TelegramService {
         }
         preview = this.escapeMarkdown(preview);
       }
+      analysisSection = `📝 **Preview:**\n${preview}\n\n`;
     }
 
     // Format the date
@@ -71,8 +76,9 @@ class TelegramService {
     message += `👤 *Author:* ${author}\n`;
     message += `📅 *Published:* ${publishedDate}\n\n`;
     
-    if (preview) {
-      message += `📝 *Preview:*\n${preview}\n\n`;
+    // Add AI analysis or content preview
+    if (analysisSection) {
+      message += analysisSection;
     }
     
     message += `🔗 [Read Full Article](${link})`;
